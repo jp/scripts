@@ -6,10 +6,12 @@ set -e
 
 # Feel free to change any of the following variables for your app:
 
+USER="ubuntu"
 APP_ROOT=/var/www/unicorn/current
-GEM_HOME=/var/www/unicorn/shared/bundle/ruby/1.9.1/gems/
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/home/ubuntu/.rbenv/versions/1.9.3-p194/bin/unicorn_rails
+
+RBENV_ROOT="/home/$USER/.rbenv"
+PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+DAEMON=/var/www/unicorn/current/bin/unicorn_rails
 NAME=unicorn
 DESC="Unicorn app"
 PID=/var/www/unicorn/shared/pids/unicorn.pid
