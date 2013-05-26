@@ -56,6 +56,15 @@ class Pool
   end
 end
 
+## Human readable filesize
+def humanize_size(s)
+  units = %W(B KiB MiB GiB TiB)
+  size, unit = units.reduce(s.to_f) do |(fsize, _), utype|
+    fsize > 512 ? [fsize / 1024, utype] : (break [fsize, utype])
+  end
+  "#{size > 9 || size.modulo(1) < 0.1 ? '%d' : '%.1f'} %s" % [size, unit]
+end
+
 
 
 $i = 0
@@ -72,11 +81,12 @@ Dir.glob(path+"/**/*").each do |file|
 
     p.schedule do
      $i += 1
+     puts "uploading #{humanize_size(File.size(file))}"
      S3.files.create(
       :key    => s3_filename,
       :body   => File.open(file)
       )
-     puts "#{$i} : "+ file
+     puts "uploaded - #{$i} : "+ file
    end
  end
 end
