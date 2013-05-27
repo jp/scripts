@@ -9,6 +9,7 @@ require 'thread'
 # http://burgestrand.se/articles/quick-and-simple-ruby-thread-pool.html
 
 NUMBER_OF_THREADS = 10
+BATCH_SIZE = 1000
 
 # directory to upload
 path = "/path/to/upload/"
@@ -44,6 +45,10 @@ class Pool
     end
   end
 
+  def length
+    @jobs.length
+  end
+
   def schedule(*args, &block)
     @jobs << [block, args]
   end
@@ -76,19 +81,29 @@ Dir.glob(path+"/**/*").each do |file|
 	if !File.directory?(file) && !File.symlink?(file)
 		s3_filename = file.gsub(path+'/',"")
     $j += 1
-    puts "#{$j} : "+ s3_filename
-
+    puts "#{$j} : "+ file
 
     p.schedule do
-     $i += 1
-     puts "uploading #{humanize_size(File.size(file))}"
-     S3.files.create(
-      :key    => s3_filename,
-      :body   => File.open(file)
-      )
-     puts "uploaded - #{$i} : "+ file
-   end
- end
+      $i += 1
+      puts "uploading #{humanize_size(File.size(file))} - #{s3_filename}"
+      S3.files.create(
+        :key      => s3_filename,
+        :body     => File.open(file),
+        :public   => false,
+        :metadata => { 'Content-Disposition' => 'attachment' }
+        )
+      puts "uploaded - #{$i} : "+ s3_filename
+    end
+
+    if $j > BATCH_SIZE
+      $j = 0
+      while p.length > 0
+        sleep 1
+        print '.'
+      end
+    end
+
+  end
 end
 
 at_exit { p.shutdown }
