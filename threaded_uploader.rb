@@ -85,8 +85,8 @@ $j = 0
 p = Pool.new(NUMBER_OF_THREADS)
 
 Dir.glob(options[:path]+"/**/*").each do |file|
-	if !File.directory?(file) && !File.symlink?(file)
-		s3_filename = file.gsub(options[:path]+'/',"")
+  if !File.directory?(file) && !File.symlink?(file)
+    s3_filename = file.gsub(options[:path]+'/',"")
     $j += 1
     puts "#{$j} : "+ file
 
