@@ -10,15 +10,16 @@ require 'optparse'
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: s3uploader.rb [options]"
+  opts.banner = "Usage: s3uploader.rb [options] [directories]"
 
   opts.on('-a', '--access-key ACCESS_KEY', 'Access key') { |v| options[:aws_access_key_id] = v }
   opts.on('-s', '--secret-key SECRET_KEY', 'Secret key') { |v| options[:aws_secret_access_key] = v }
   opts.on('-b', '--bucket BUCKET', 'Target bucket') { |v| options[:bucket] = v }
   opts.on('-r', '--region REGION', 'Bucket region') { |v| options[:region] = v }
-  opts.on('-p', '--path PATH', 'Path file/dir') { |v| options[:path] = v }
 
 end.parse!
+
+options[:paths] = ARGV
 
 NUMBER_OF_THREADS = 10
 BATCH_SIZE = 1000
@@ -84,32 +85,34 @@ $j = 0
 
 p = Pool.new(NUMBER_OF_THREADS)
 
-Dir.glob(options[:path]+"/**/*").each do |file|
-  if !File.directory?(file) && !File.symlink?(file)
-    s3_filename = file.gsub(options[:path]+'/',"")
-    $j += 1
-    puts "#{$j} : "+ file
+options[:paths].each do |path|
+  Dir.glob(path+"/**/*").each do |file|
+    if !File.directory?(file) && !File.symlink?(file)
+      s3_filename = file.gsub(path+'/',"")
+      $j += 1
+      puts "#{$j} : "+ file
 
-    p.schedule do
-      $i += 1
-      puts "uploading #{humanize_size(File.size(file))} - #{s3_filename}"
-      S3.files.create(
-        :key      => s3_filename,
-        :body     => File.open(file),
-        :public   => false,
-        :metadata => { 'Content-Disposition' => 'attachment' }
-        )
-      puts "uploaded - #{$i} : "+ s3_filename
-    end
-
-    if $j > BATCH_SIZE
-      $j = 0
-      while p.length > 0
-        sleep 1
-        print '.'
+      p.schedule do
+        $i += 1
+        puts "uploading #{humanize_size(File.size(file))} - #{s3_filename}"
+        S3.files.create(
+          :key      => s3_filename,
+          :body     => File.open(file),
+          :public   => false,
+          :metadata => { 'Content-Disposition' => 'attachment' }
+          )
+        puts "uploaded - #{$i} : "+ s3_filename
       end
-    end
 
+      if $j > BATCH_SIZE
+        $j = 0
+        while p.length > 0
+          sleep 1
+          print '.'
+        end
+      end
+
+    end
   end
 end
 
