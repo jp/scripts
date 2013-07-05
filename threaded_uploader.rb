@@ -1,4 +1,3 @@
-require 'rubygems'
 require 'fog'
 require 'thread'
 require 'optparse'
