@@ -1,31 +1,38 @@
 require 'rubygems'
 require 'fog'
 require 'thread'
+require 'optparse'
 
 # Awesome threaded S3 uploader
 # -------------------------
-
-# Thanks to Kim Burgestrand
+# Thanks to Kim Burgestrand for the threadpool
 # http://burgestrand.se/articles/quick-and-simple-ruby-thread-pool.html
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: s3uploader.rb [options]"
+
+  opts.on('-a', '--access-key ACCESS_KEY', 'Access key') { |v| options[:aws_access_key_id] = v }
+  opts.on('-s', '--secret-key SECRET_KEY', 'Secret key') { |v| options[:aws_secret_access_key] = v }
+  opts.on('-b', '--bucket BUCKET', 'Target bucket') { |v| options[:bucket] = v }
+  opts.on('-r', '--region REGION', 'Bucket region') { |v| options[:region] = v }
+  opts.on('-p', '--path PATH', 'Path file/dir') { |v| options[:path] = v }
+
+end.parse!
 
 NUMBER_OF_THREADS = 10
 BATCH_SIZE = 1000
-
-# directory to upload
-path = "/path/to/upload/"
 
 # Fog connection
 
 CONNECTION = Fog::Storage.new({
   :provider                 => 'AWS',
-  :aws_access_key_id        => "XXXXX",
-  :aws_secret_access_key    => "XXXXX",
-  :region                => "us-west-2"
-  })
+  :aws_access_key_id        => options[:aws_access_key_id],
+  :aws_secret_access_key    => options[:aws_secret_access_key],
+  :region                   => options[:region]
+})
 
-S3 = CONNECTION.directories.get("bucket-name")
-
-# Awesome thread pool by Kim Burgestrand
+S3 = CONNECTION.directories.get(options[:bucket])
 
 class Pool
   def initialize(size)
@@ -70,16 +77,16 @@ def humanize_size(s)
   "#{size > 9 || size.modulo(1) < 0.1 ? '%d' : '%.1f'} %s" % [size, unit]
 end
 
-
+## Uploader
 
 $i = 0
 $j = 0
 
 p = Pool.new(NUMBER_OF_THREADS)
 
-Dir.glob(path+"/**/*").each do |file|
+Dir.glob(options[:path]+"/**/*").each do |file|
 	if !File.directory?(file) && !File.symlink?(file)
-		s3_filename = file.gsub(path+'/',"")
+		s3_filename = file.gsub(options[:path]+'/',"")
     $j += 1
     puts "#{$j} : "+ file
 
