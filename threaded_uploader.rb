@@ -2,11 +2,6 @@ require 'fog'
 require 'thread'
 require 'optparse'
 
-# Awesome threaded S3 uploader
-# -------------------------
-# Thanks to Kim Burgestrand for the threadpool
-# http://burgestrand.se/articles/quick-and-simple-ruby-thread-pool.html
-
 options = {}
 OptionParser.new do |opts|
   opts.banner = "Usage: s3uploader.rb [options] [directories]"
