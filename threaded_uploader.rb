@@ -73,22 +73,23 @@ def humanize_size(s)
 end
 
 def upload_file(s3_key, file)
-  puts "uploading #{humanize_size(File.size(file))} - #{s3_key}"
-  S3.files.create(
-    :key      => s3_key,
-    :body     => File.open(file),
-    :public   => false,
-    :metadata => { 'Content-Disposition' => 'attachment' }
-    )
-  puts "uploaded - #{$i} : "+ s3_key
+  $pool.schedule do
+    puts "uploading #{humanize_size(File.size(file))} - #{s3_key}"
+    S3.files.create(
+      :key      => s3_key,
+      :body     => File.open(file),
+      :public   => false,
+      :metadata => { 'Content-Disposition' => 'attachment' }
+      )
+    puts "uploaded : "+ s3_key
+  end
 end
 
 ## Uploader
 
 $i = 0
-$j = 0
 
-p = Pool.new(NUMBER_OF_THREADS)
+$pool = Pool.new(NUMBER_OF_THREADS)
 
 options[:paths].each do |path|
   if !File.directory?(path)
@@ -97,17 +98,13 @@ options[:paths].each do |path|
     Dir.glob(path+"/**/*").each do |file|
       if !File.directory?(file) && !File.symlink?(file)
         s3_filename = file.gsub(path+'/',"")
-        $j += 1
-        puts "#{$j} : "+ file
+        $i += 1
 
-        p.schedule do
-          $i += 1
-          upload_file(s3_filename,file)
-        end
+        upload_file(s3_filename,file)
 
-        if $j > BATCH_SIZE
-          $j = 0
-          while p.length > 0
+        if $i > BATCH_SIZE
+          $i = 0
+          while $pool.length > 0
             sleep 1
             print '.'
           end
@@ -118,4 +115,4 @@ options[:paths].each do |path|
   end
 end
 
-at_exit { p.shutdown }
+at_exit { $pool.shutdown }
